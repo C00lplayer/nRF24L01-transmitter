@@ -68,6 +68,7 @@ while True:
     if role == "send":
         for i in info:
             send(nrf,i)
+            sleep(1)
         #send(nrf, "Yello world")
         #send(nrf, "Test")
     else:
