@@ -1,23 +1,21 @@
 # demo.py
-# Kevin McAleer
 # test the nRF24L01 modules to send and receive data
-# Watch this video for more information about that library https://www.youtube.com/watch?v=aP8rSN-1eT0
 
 from nrf24l01 import NRF24L01
 from machine import SPI, Pin
 from time import sleep
 import struct
 
-csn = Pin(14, mode=Pin.OUT, value=1) # Chip Select Not
-ce = Pin(17, mode=Pin.OUT, value=0)  # Chip Enable
+csn = Pin(17, mode=Pin.OUT, value=1) # Chip Select Not
+ce = Pin(21, mode=Pin.OUT, value=0)  # Chip Enable
 led = Pin(25, Pin.OUT)               # Onboard LED
 payload_size = 20
 
 # Define the channel or 'pipes' the radios use.
 # switch round the pipes depending if this is a sender or receiver pico
-
-# role = "send"
-role = "receive"
+info = ["[100,200,300,400]","[101,201,301,401]","[102,202,302,402]"]
+role = "send"
+#role = "receive"
 
 if role == "send":
     send_pipe = b"\xe1\xf0\xf0\xf0\xf0"
@@ -29,12 +27,13 @@ else:
 def setup():
     print("Initialising the nRF24L0+ Module")
     nrf = NRF24L01(SPI(0), csn, ce, payload_size=payload_size)
+    nrf.set_power_speed(0,1)
     nrf.open_tx_pipe(send_pipe)
     nrf.open_rx_pipe(1, receive_pipe)
     nrf.start_listening()
     return nrf
 
-def flash_led(times:int=None):
+def flash_led(times:int=0):
     ''' Flashed the built in LED the number of times defined in the times parameter '''
     for _ in range(times):
         led.value(1)
@@ -45,17 +44,17 @@ def flash_led(times:int=None):
 def send(nrf, msg):
     print("sending message.", msg)
     nrf.stop_listening()
-    for n in range(len(msg)):
-        try:
-            encoded_string = msg[n].encode()
-            byte_array = bytearray(encoded_string)
-            buf = struct.pack("s", byte_array)
-            nrf.send(buf)
-            # print(role,"message",msg[n],"sent")
-            flash_led(1)
-        except OSError:
-            print(role,"Sorry message not sent")
-    nrf.send("\n")
+    #for n in range(len(msg)):
+    try:
+        encoded_string = msg.encode()
+        #byte_array = bytearray(encoded_string)
+        buf = struct.pack(f"{payload_size}s", encoded_string)
+        nrf.send(buf)
+        # print(role,"message",msg[n],"sent")
+        flash_led(1)
+    except OSError:
+        print(role,"Sorry message not sent")
+    #nrf.send("\n")
     nrf.start_listening()
 
 # main code loop
@@ -67,8 +66,10 @@ msg_string = ""
 while True:
     msg = ""
     if role == "send":
-        send(nrf, "Yello world")
-        send(nrf, "Test")
+        for i in info:
+            send(nrf,i)
+        #send(nrf, "Yello world")
+        #send(nrf, "Test")
     else:
         # Check for Messages
         if nrf.any():
